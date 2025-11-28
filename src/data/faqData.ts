@@ -5,6 +5,21 @@ export interface FAQItem {
   keywords: string[];
 }
 
+export const faqCategories = [
+  "Conceito Geral da MR3X",
+  "Usuários e Hierarquia",
+  "CRUD de Usuários",
+  "Cadastro e Gestão de Imóveis",
+  "Contratos e Assinatura",
+  "Vistoria Digital",
+  "Cobranças, Pagamentos e Split",
+  "Acordos e Notificações",
+  "API, Tokens e Auditoria",
+  "Erros Comuns",
+  "Segurança e Privacidade",
+  "Suporte e Operação",
+];
+
 export const faqData: FAQItem[] = [
   // ========== CONCEITO GERAL DA MR3X ==========
   {

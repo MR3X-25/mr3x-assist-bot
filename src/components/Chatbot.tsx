@@ -1,21 +1,30 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Loader2 } from "lucide-react";
+import { MessageCircle, X, Loader2, List, History, LogOut } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
+import { CategoryBrowser } from "./CategoryBrowser";
+import { ConversationHistory } from "./ConversationHistory";
+import { Auth } from "./Auth";
 import { searchFAQ } from "@/data/faqData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./ui/use-toast";
 import { cn } from "@/lib/utils";
 
 interface Message {
+  id?: string;
   text: string;
   isUser: boolean;
 }
 
+type ViewMode = "chat" | "categories" | "history";
+
 export const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("chat");
+  const [user, setUser] = useState<any>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       text: "Olá! 👋 Sou o assistente virtual da MR3X. Como posso ajudá-lo hoje?",
@@ -23,6 +32,7 @@ export const Chatbot = () => {
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -34,9 +44,140 @@ export const Chatbot = () => {
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setAuthChecked(true);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user && currentConversationId) {
+      loadMessages(currentConversationId);
+    }
+  }, [user, currentConversationId]);
+
+  const loadMessages = async (conversationId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setMessages(
+          data.map((msg) => ({
+            id: msg.id,
+            text: msg.content,
+            isUser: msg.is_user,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Erro ao carregar mensagens:", error);
+    }
+  };
+
+  const saveMessage = async (content: string, isUser: boolean) => {
+    if (!user || !currentConversationId) return;
+
+    try {
+      const { error } = await supabase.from("messages").insert({
+        conversation_id: currentConversationId,
+        content,
+        is_user: isUser,
+      });
+
+      if (error) throw error;
+
+      await supabase
+        .from("conversations")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", currentConversationId);
+    } catch (error) {
+      console.error("Erro ao salvar mensagem:", error);
+    }
+  };
+
+  const createNewConversation = async (firstMessage: string) => {
+    if (!user) return null;
+
+    try {
+      const title = firstMessage.slice(0, 50) + (firstMessage.length > 50 ? "..." : "");
+      
+      const { data, error } = await supabase
+        .from("conversations")
+        .insert({
+          user_id: user.id,
+          title,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data.id;
+    } catch (error) {
+      console.error("Erro ao criar conversa:", error);
+      return null;
+    }
+  };
+
+  const handleNewConversation = () => {
+    setCurrentConversationId(null);
+    setMessages([
+      {
+        text: "Olá! 👋 Sou o assistente virtual da MR3X. Como posso ajudá-lo hoje?",
+        isUser: false,
+      },
+    ]);
+    setViewMode("chat");
+  };
+
+  const handleConversationSelect = (conversationId: string) => {
+    setCurrentConversationId(conversationId);
+    setViewMode("chat");
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setCurrentConversationId(null);
+    setMessages([
+      {
+        text: "Olá! 👋 Sou o assistente virtual da MR3X. Como posso ajudá-lo hoje?",
+        isUser: false,
+      },
+    ]);
+    toast({
+      title: "Logout realizado",
+      description: "Até logo!",
+    });
+  };
+
   const handleSendMessage = async (message: string) => {
-    setMessages((prev) => [...prev, { text: message, isUser: true }]);
+    const userMessage = { text: message, isUser: true };
+    setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
+
+    let convId = currentConversationId;
+    if (user && !convId) {
+      convId = await createNewConversation(message);
+      setCurrentConversationId(convId);
+    }
+
+    if (user && convId) {
+      await saveMessage(message, true);
+    }
 
     try {
       // Buscar no FAQ local
@@ -65,7 +206,12 @@ export const Chatbot = () => {
       }
 
       const reply = data.reply || data.fallback;
-      setMessages((prev) => [...prev, { text: reply, isUser: false }]);
+      const assistantMessage = { text: reply, isUser: false };
+      setMessages((prev) => [...prev, assistantMessage]);
+
+      if (user && convId) {
+        await saveMessage(reply, false);
+      }
 
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
@@ -80,13 +226,15 @@ export const Chatbot = () => {
         }
       }
       
-      setMessages((prev) => [
-        ...prev,
-        {
-          text: `${errorMessage}\n\nPor favor, entre em contato com suporte@mr3x.com.br para obter ajuda.`,
-          isUser: false,
-        },
-      ]);
+      const errorMsg = {
+        text: `${errorMessage}\n\nPor favor, entre em contato com suporte@mr3x.com.br para obter ajuda.`,
+        isUser: false,
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+
+      if (user && convId) {
+        await saveMessage(errorMsg.text, false);
+      }
 
       toast({
         title: "Erro",
@@ -97,6 +245,10 @@ export const Chatbot = () => {
       setIsLoading(false);
     }
   };
+
+  if (!authChecked) {
+    return null;
+  }
 
   return (
     <>
@@ -123,21 +275,68 @@ export const Chatbot = () => {
             "animate-in slide-in-from-bottom-8 fade-in-0 duration-300"
           )}
         >
-          {/* Header */}
-          <div className="p-4 border-b bg-gradient-to-r from-primary to-secondary text-white rounded-t-lg">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                <MessageCircle className="w-6 h-6" />
+          {!user ? (
+            <Auth onAuthSuccess={() => setViewMode("chat")} />
+          ) : (
+            <>
+              {/* Header */}
+              <div className="p-4 border-b bg-gradient-to-r from-primary to-secondary text-white rounded-t-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                    <MessageCircle className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold">Assistente MR3X</h3>
+                    <p className="text-xs text-white/80">Online • Responde em segundos</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-white hover:bg-white/20"
+                      onClick={() => setViewMode("categories")}
+                      title="Categorias"
+                    >
+                      <List className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-white hover:bg-white/20"
+                      onClick={() => setViewMode("history")}
+                      title="Histórico"
+                    >
+                      <History className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-white hover:bg-white/20"
+                      onClick={handleLogout}
+                      title="Sair"
+                    >
+                      <LogOut className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold">Assistente MR3X</h3>
-                <p className="text-xs text-white/80">Online • Responde em segundos</p>
-              </div>
-            </div>
-          </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-background to-accent/5">
+              {/* Content */}
+              {viewMode === "categories" ? (
+                <CategoryBrowser
+                  onQuestionSelect={handleSendMessage}
+                  onClose={() => setViewMode("chat")}
+                />
+              ) : viewMode === "history" ? (
+                <ConversationHistory
+                  currentConversationId={currentConversationId}
+                  onConversationSelect={handleConversationSelect}
+                  onNewConversation={handleNewConversation}
+                />
+              ) : (
+                <>
+                  {/* Messages */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-background to-accent/5">
             {messages.map((msg, idx) => (
               <ChatMessage key={idx} message={msg.text} isUser={msg.isUser} />
             ))}
@@ -155,11 +354,15 @@ export const Chatbot = () => {
                 </div>
               </div>
             )}
-            <div ref={messagesEndRef} />
-          </div>
+                    <div ref={messagesEndRef} />
+                  </div>
 
-          {/* Input */}
-          <ChatInput onSend={handleSendMessage} disabled={isLoading} />
+                  {/* Input */}
+                  <ChatInput onSend={handleSendMessage} disabled={isLoading} />
+                </>
+              )}
+            </>
+          )}
         </Card>
       )}
     </>
