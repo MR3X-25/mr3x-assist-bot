@@ -33,6 +33,7 @@ export const Chatbot = () => {
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -256,14 +257,15 @@ export const Chatbot = () => {
       <Button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-chat z-50",
-          "bg-gradient-to-br from-primary to-secondary",
-          "hover:shadow-xl hover:scale-110 transition-all duration-300",
-          isOpen && "rotate-90"
+          "fixed bottom-6 right-6 h-16 w-16 rounded-full z-50",
+          "bg-gradient-to-br from-primary via-accent-1 to-secondary",
+          "hover:scale-110 transition-all duration-300",
+          "animate-pulse-glow",
+          isOpen && "rotate-90 scale-95"
         )}
         size="icon"
       >
-        {isOpen ? <X className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
+        {isOpen ? <X className="w-6 h-6 animate-spin" /> : <MessageCircle className="w-6 h-6 animate-float" />}
       </Button>
 
       {/* Chat Window */}
@@ -271,52 +273,66 @@ export const Chatbot = () => {
         <Card 
           className={cn(
             "fixed bottom-24 right-6 w-[400px] h-[600px] z-50",
-            "flex flex-col shadow-chat border-2 border-primary/20",
-            "animate-in slide-in-from-bottom-8 fade-in-0 duration-300"
+            "flex flex-col shadow-chat border-2",
+            "border-transparent bg-gradient-to-br from-primary/10 via-accent-1/10 to-secondary/10",
+            "backdrop-blur-xl",
+            "animate-in slide-in-from-bottom-8 fade-in-0 duration-500"
           )}
         >
-          {!user ? (
-            <Auth onAuthSuccess={() => setViewMode("chat")} />
+          {showAuth && !user ? (
+            <Auth onAuthSuccess={() => {
+              setShowAuth(false);
+              setViewMode("chat");
+            }} />
           ) : (
             <>
               {/* Header */}
-              <div className="p-4 border-b bg-gradient-to-r from-primary to-secondary text-white rounded-t-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+              <div className="p-4 border-b border-border/50 bg-gradient-to-r from-primary via-accent-1 to-secondary text-white rounded-t-lg relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" 
+                     style={{ backgroundSize: '200% 100%' }} />
+                <div className="relative flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center animate-pulse-glow backdrop-blur-sm">
                     <MessageCircle className="w-6 h-6" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold">Assistente MR3X</h3>
-                    <p className="text-xs text-white/80">Online • Responde em segundos</p>
+                    <h3 className="font-bold text-lg">Assistente MR3X</h3>
+                    <p className="text-xs text-white/90 flex items-center gap-1">
+                      <span className="w-2 h-2 bg-accent-2 rounded-full animate-pulse" />
+                      Online • Respostas instantâneas
+                    </p>
                   </div>
                   <div className="flex gap-1">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-white hover:bg-white/20"
+                      className="h-8 w-8 text-white hover:bg-white/20 transition-all hover:scale-110"
                       onClick={() => setViewMode("categories")}
                       title="Categorias"
                     >
                       <List className="w-4 h-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-white hover:bg-white/20"
-                      onClick={() => setViewMode("history")}
-                      title="Histórico"
-                    >
-                      <History className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-white hover:bg-white/20"
-                      onClick={handleLogout}
-                      title="Sair"
-                    >
-                      <LogOut className="w-4 h-4" />
-                    </Button>
+                    {user && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-white hover:bg-white/20 transition-all hover:scale-110"
+                          onClick={() => setViewMode("history")}
+                          title="Histórico"
+                        >
+                          <History className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-white hover:bg-white/20 transition-all hover:scale-110"
+                          onClick={handleLogout}
+                          title="Sair"
+                        >
+                          <LogOut className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -327,7 +343,7 @@ export const Chatbot = () => {
                   onQuestionSelect={handleSendMessage}
                   onClose={() => setViewMode("chat")}
                 />
-              ) : viewMode === "history" ? (
+              ) : viewMode === "history" && user ? (
                 <ConversationHistory
                   currentConversationId={currentConversationId}
                   onConversationSelect={handleConversationSelect}
@@ -336,29 +352,45 @@ export const Chatbot = () => {
               ) : (
                 <>
                   {/* Messages */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-background to-accent/5">
-            {messages.map((msg, idx) => (
-              <ChatMessage key={idx} message={msg.text} isUser={msg.isUser} />
-            ))}
-            {isLoading && (
-              <div className="flex gap-3 justify-start">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                  <Loader2 className="w-5 h-5 text-white animate-spin" />
-                </div>
-                <div className="bg-chat-assistant text-chat-assistant-foreground rounded-2xl rounded-bl-md px-4 py-3 border border-border">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
-                </div>
-              </div>
-            )}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-background via-background to-accent/5">
+                    {messages.map((msg, idx) => (
+                      <div key={idx} className="animate-slide-up">
+                        <ChatMessage message={msg.text} isUser={msg.isUser} />
+                      </div>
+                    ))}
+                    {isLoading && (
+                      <div className="flex gap-3 justify-start animate-slide-up">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary via-accent-1 to-secondary flex items-center justify-center shadow-glow">
+                          <Loader2 className="w-5 h-5 text-white animate-spin" />
+                        </div>
+                        <div className="bg-card text-card-foreground rounded-2xl rounded-bl-md px-4 py-3 border border-primary/20 shadow-message">
+                          <div className="flex gap-1">
+                            <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <div className="w-2 h-2 bg-accent-1 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <div className="w-2 h-2 bg-secondary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <div ref={messagesEndRef} />
                   </div>
 
-                  {/* Input */}
-                  <ChatInput onSend={handleSendMessage} disabled={isLoading} />
+                  {/* Input Area */}
+                  <div className="border-t border-border/50 bg-background/80 backdrop-blur-sm">
+                    <ChatInput onSend={handleSendMessage} disabled={isLoading} />
+                    {!user && (
+                      <div className="px-4 pb-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowAuth(true)}
+                          className="w-full text-xs border-primary/30 hover:border-primary hover:bg-primary/10 transition-all"
+                        >
+                          Login para salvar conversas
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
             </>
