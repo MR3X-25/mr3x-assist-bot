@@ -7,6 +7,7 @@ import { ChatInput } from "./ChatInput";
 import { CategoryBrowser } from "./CategoryBrowser";
 import { ConversationHistory } from "./ConversationHistory";
 import { Auth } from "./Auth";
+import { MessageFeedback } from "./MessageFeedback";
 import { searchFAQ } from "@/data/faqData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./ui/use-toast";
@@ -189,6 +190,19 @@ export const Chatbot = () => {
 
       console.log('FAQ encontrado:', faqResults.length, 'resultados');
 
+      // Determinar categoria baseada nos resultados do FAQ
+      const category = faqResults.length > 0 ? faqResults[0].category : "Geral";
+
+      // Track analytics (apenas se usuário estiver logado)
+      if (user) {
+        await supabase.from("chatbot_analytics").insert({
+          user_id: user.id,
+          question: message,
+          category,
+          response_type: faqResults.length > 0 ? "faq" : "ai",
+        });
+      }
+
       // Chamar edge function com IA
       const { data, error } = await supabase.functions.invoke('chat-faq', {
         body: { 
@@ -356,6 +370,14 @@ export const Chatbot = () => {
                     {messages.map((msg, idx) => (
                       <div key={idx} className="animate-slide-up">
                         <ChatMessage message={msg.text} isUser={msg.isUser} />
+                        {/* Adicionar feedback apenas para mensagens do bot (não do usuário) */}
+                        {!msg.isUser && user && currentConversationId && idx > 0 && (
+                          <MessageFeedback
+                            conversationId={currentConversationId}
+                            messageContent={msg.text}
+                            userId={user.id}
+                          />
+                        )}
                       </div>
                     ))}
                     {isLoading && (
