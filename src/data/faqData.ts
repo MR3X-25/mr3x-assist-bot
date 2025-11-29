@@ -925,6 +925,98 @@ export const faqData: FAQItem[] = [
     answer: "Envie para suporte@mr3x.com.br com print e descrição.",
     category: "Problemas Técnicos",
     keywords: ["reportar", "erro", "crítico"]
+  },
+  
+  // Novas perguntas sobre lógica de planos e limites
+  {
+    question: "O que significa 'imóvel congelado' ou 'modo somente leitura'?",
+    answer: "Quando você ultrapassa o limite de imóveis do seu plano, os imóveis excedentes ficam visíveis mas bloqueados para edição, emissão de boletos, criação de contratos e envio de cobranças. Seus dados não são perdidos, apenas ficam temporariamente inacessíveis até fazer upgrade do plano.",
+    category: "Planos e Assinaturas",
+    keywords: ["congelado", "bloqueado", "somente leitura", "modo", "imóvel"]
+  },
+  {
+    question: "O que acontece quando um usuário é desativado por limite de plano?",
+    answer: "Usuários desativados podem visualizar informações, mas não podem criar, editar ou excluir nada. Eles também não conseguem se autenticar no sistema e não aparecem em novas operações. Os dados do usuário não são perdidos.",
+    category: "Planos e Assinaturas",
+    keywords: ["usuário", "desativado", "limite", "plano", "bloqueado"]
+  },
+  {
+    question: "Como funciona o pré-cadastro na MR3X?",
+    answer: "No pré-cadastro, você escolhe entre criar uma Agência (PJ) ou Proprietário Independente (PF/PJ). Após preencher os dados básicos e confirmar e-mail/WhatsApp, você entra automaticamente no Plano FREE. Os demais planos (Essential, Professional, Enterprise) ficam disponíveis somente após entrar no painel.",
+    category: "Planos e Assinaturas",
+    keywords: ["pré-cadastro", "cadastro", "registro", "criar conta", "plano free"]
+  },
+  {
+    question: "A migração de plano é automática após o pagamento?",
+    answer: "Sim. Quando você escolhe um plano e realiza o pagamento via Asaas, a MR3X recebe o webhook de confirmação e muda automaticamente seu plano, limites de propriedades, limites de usuários e permissões extras. Não é necessária intervenção manual ou suporte.",
+    category: "Planos e Assinaturas",
+    keywords: ["migração", "upgrade", "automático", "pagamento", "plano"]
+  },
+  {
+    question: "A MR3X retém dinheiro dos aluguéis?",
+    answer: "Não. A MR3X apenas desconta automaticamente sua taxa (plano + taxas reduzidas do gateway) e envia o restante. O split de pagamento divide os valores entre as taxas MR3X, valor da agência e valor do proprietário vinculado (se aplicável). Para proprietários independentes, o split divide apenas as taxas MR3X e o valor líquido do proprietário.",
+    category: "Pagamentos e Split",
+    keywords: ["retém", "dinheiro", "aluguel", "split", "taxa"]
+  },
+  {
+    question: "Qual a diferença entre usuários internos da MR3X e clientes?",
+    answer: "Usuários internos (CEO, Admin, Auditor, Suporte) pertencem à operação da MR3X como empresa de tecnologia e não gerenciam imóveis, contratos ou clientes. Usuários externos (Agência, Proprietário Independente, Inquilino, Síndico) são clientes que usam a MR3X para gerir seus próprios processos imobiliários. A MR3X é apenas o intermediário tecnológico, não uma imobiliária.",
+    category: "Agência e Hierarquia",
+    keywords: ["usuários", "internos", "externos", "diferença", "hierarquia", "ceo", "admin"]
+  },
+  {
+    question: "Quem pode criar o Admin da MR3X?",
+    answer: "Somente o CEO (dono da plataforma) pode criar o Admin. O Admin é o administrador operacional da plataforma e responsável pela gestão do SaaS, incluindo planos, ativação/desativação de contas, monitoramento de logs e integrações.",
+    category: "Agência e Hierarquia",
+    keywords: ["admin", "criar", "ceo", "hierarquia"]
+  },
+  {
+    question: "O que é o Auditor da MR3X?",
+    answer: "O Auditor é um usuário interno da MR3X com acesso somente leitura. Ele verifica logs, compliance, tokens, hashes, assinaturas e transações para garantir segurança e conformidade do sistema.",
+    category: "Agência e Hierarquia",
+    keywords: ["auditor", "logs", "compliance", "leitura"]
+  },
+  {
+    question: "Ao fazer upgrade, meus dados congelados são reativados?",
+    answer: "Sim. Sem intervenção de suporte, sem perda de dados e sem reprocessamento. Imóveis congelados são ativados, usuários desativados são reativados, funções bloqueadas são liberadas, cobranças suspensas são retomadas e a API é reativada. Tudo automático.",
+    category: "Planos e Assinaturas",
+    keywords: ["upgrade", "reativar", "dados", "congelados", "automático"]
+  },
+  {
+    question: "Posso escolher qual imóvel será o ativo no plano FREE?",
+    answer: "Sim. A plataforma permite que você visualize a lista completa de imóveis e escolha qual será o único imóvel ativo. Se tentar ativar outro, aparecerá uma janela pedindo upgrade ou permitindo trocar o ativo (desativando o anterior).",
+    category: "Planos e Assinaturas",
+    keywords: ["escolher", "imóvel", "ativo", "free", "trocar"]
+  },
+  {
+    question: "Por que apenas o plano FREE aparece no pré-cadastro?",
+    answer: "Para simplificar o onboarding, reduzir atrito, evitar escolha incorreta e permitir testar a plataforma sem barreiras. Somente usuários autenticados podem fazer upgrade. Após entrar na plataforma, os demais planos (Essential, Professional, Enterprise) ficam disponíveis no menu Financeiro/Planos e Assinaturas.",
+    category: "Planos e Assinaturas",
+    keywords: ["pré-cadastro", "free", "planos", "onboarding", "upgrade"]
+  },
+  {
+    question: "O que acontece com as cobranças de imóveis congelados?",
+    answer: "Cobranças automáticas de imóveis congelados são suspensas. O sistema envia alertas informando que seu plano atual não suporta este número de imóveis e solicita renovação para reativar cobranças. Nada é apagado, apenas fica inoperante.",
+    category: "Pagamentos e Split",
+    keywords: ["cobranças", "imóveis", "congelados", "suspensas"]
+  },
+  {
+    question: "A API é bloqueada no plano FREE?",
+    answer: "Sim. Se a agência tiver API ativa e cair para o plano FREE, a API é automaticamente suspensa, as chaves ficam inválidas e os webhooks deixam de ser enviados. Isso impede uso indevido. A API é liberada apenas nos planos Professional e Enterprise.",
+    category: "Planos e Assinaturas",
+    keywords: ["api", "bloqueada", "free", "suspensa"]
+  },
+  {
+    question: "A MR3X gerencia proprietários e imóveis dos clientes?",
+    answer: "Não. A MR3X não gerencia proprietários, imóveis ou inquilinos. A MR3X é apenas o intermediário tecnológico, não uma imobiliária. Toda a relação jurídica e operacional de imóveis é responsabilidade da Agência imobiliária ou do Proprietário Independente.",
+    category: "Agência e Hierarquia",
+    keywords: ["gerenciar", "proprietários", "imóveis", "responsabilidade"]
+  },
+  {
+    question: "Como a agência configura o repasse para os proprietários?",
+    answer: "Dentro de cada contrato, a agência define quanto o proprietário receberá e se o repasse é percentual, valor fixo ou repasse integral. Essas configurações são usadas no split. A MR3X não interfere nos acordos entre a agência e o proprietário.",
+    category: "Pagamentos e Split",
+    keywords: ["repasse", "agência", "proprietário", "split", "configurar"]
   }
 ];
 
