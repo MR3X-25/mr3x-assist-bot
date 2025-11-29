@@ -11,7 +11,14 @@ export const faqCategories = [
   "Pagamentos e Split",
   "Contratos e Documentos",
   "Agência e Hierarquia",
-  "Problemas Técnicos"
+  "Problemas Técnicos",
+  "Contratos Digitais e Assinaturas",
+  "Validações e Cadastros",
+  "Índices, Multas e Despesas",
+  "Hierarquia de Usuários",
+  "Operações Financeiras e Split",
+  "ACL e Permissões",
+  "Fluxogramas e Arquitetura"
 ];
 
 export const faqData: FAQItem[] = [
@@ -1017,6 +1024,272 @@ export const faqData: FAQItem[] = [
     answer: "Dentro de cada contrato, a agência define quanto o proprietário receberá e se o repasse é percentual, valor fixo ou repasse integral. Essas configurações são usadas no split. A MR3X não interfere nos acordos entre a agência e o proprietário.",
     category: "Pagamentos e Split",
     keywords: ["repasse", "agência", "proprietário", "split", "configurar"]
+  },
+
+  // Contratos Digitais e Assinaturas
+  {
+    question: "Como funciona a assinatura digital na MR3X?",
+    answer: "A MR3X utiliza assinatura digital com hash SHA-256, registro de IP, timestamp RFC3161 e token de autenticação. Cada documento possui metadados internos (document_id UUID, created_by, timestamp) e QR Code lateral em cada página para verificação de autenticidade. A assinatura segue o padrão PAdES (PDF Advanced Electronic Signature) compatível com ICP-Brasil.",
+    category: "Contratos Digitais e Assinaturas",
+    keywords: ["assinatura", "digital", "hash", "token", "pades", "icp-brasil", "segurança"]
+  },
+  {
+    question: "O que é o hash do contrato e para que serve?",
+    answer: "O hash é um código único SHA-256 gerado a partir dos bytes do documento. Ele garante autenticidade e integridade do contrato. Qualquer alteração no documento muda o hash, permitindo detectar adulterações. O hash é armazenado com timestamp e usado na verificação via QR Code.",
+    category: "Contratos Digitais e Assinaturas",
+    keywords: ["hash", "sha-256", "integridade", "autenticidade", "segurança", "verificação"]
+  },
+  {
+    question: "Como funciona o QR Code no PDF do contrato?",
+    answer: "Cada página do PDF possui um QR Code lateral contendo: document_id, número da página, hash SHA-256 da página, data/hora e URL de verificação. O QR Code permite validar a autenticidade do documento offline através de qualquer leitor de QR Code, direcionando para o verificador público da MR3X.",
+    category: "Contratos Digitais e Assinaturas",
+    keywords: ["qr code", "pdf", "verificação", "autenticidade", "validação", "documento"]
+  },
+  {
+    question: "Posso verificar se um contrato foi adulterado?",
+    answer: "Sim. Acesse o verificador público através do QR Code no documento ou em /api/v1/verify/{document_id}. O sistema recalcula o hash e compara com o original, valida assinaturas digitais PAdES, verifica carimbo de tempo TSA e retorna o status: 'valid', 'tampered', 'unsigned', 'revoked' ou 'invalid_signature'.",
+    category: "Contratos Digitais e Assinaturas",
+    keywords: ["verificação", "adulteração", "validação", "hash", "verificador", "segurança"]
+  },
+  {
+    question: "O que é o token JWT e para que serve?",
+    answer: "JWT (JSON Web Token) com algoritmo RS256 é usado para autenticação entre frontend, backend e microserviços. Contém: issuer (iss), user_id (sub), roles (ADMIN/OWNER/AGENCY/INQUILINO/AUDITOR), timestamps (iat/exp) e key id (kid). Token de curta duração (15-60 min) com refresh tokens criptografados em DB para ações sensíveis.",
+    category: "Contratos Digitais e Assinaturas",
+    keywords: ["jwt", "token", "autenticação", "rs256", "segurança", "api"]
+  },
+  {
+    question: "Como funciona o registro de IP e trilha de auditoria?",
+    answer: "Todas as ações são registradas com: timestamp UTC ISO8601, IP (v4/v6), user_agent, user_id, tipo de ação (create/edit/sign/verify), document_id, geolocalização opcional e request_id UUID. Logs são criptografados, armazenados em modo append-only (WORM) e mantidos conforme LGPD. Permite rastreamento completo de todas operações.",
+    category: "Contratos Digitais e Assinaturas",
+    keywords: ["ip", "auditoria", "logs", "rastreamento", "lgpd", "segurança"]
+  },
+  {
+    question: "Quantas partes podem assinar um contrato?",
+    answer: "Ilimitadas. O sistema permite incluir quantas partes forem necessárias: proprietários, inquilinos, corretores (com CRECI), testemunhas, fiadores, etc. Cada assinatura é registrada com timestamp, IP, certificado digital e hash individual. O painel exibe status em tempo real de quem assinou.",
+    category: "Contratos Digitais e Assinaturas",
+    keywords: ["assinatura", "partes", "múltiplos", "signatários", "contrato", "creci"]
+  },
+  {
+    question: "Posso alterar o contrato depois da assinatura?",
+    answer: "Não. Após assinatura digital, o contrato é imutável. Qualquer alteração requer criar um aditivo contratual (novo documento vinculado ao original). Isso garante integridade jurídica e validade legal. O hash e carimbo de tempo impedem modificações não autorizadas.",
+    category: "Contratos Digitais e Assinaturas",
+    keywords: ["alteração", "contrato", "assinado", "imutável", "aditivo", "jurídico"]
+  },
+
+  // Validações e Cadastros
+  {
+    question: "Como funciona a validação de CPF?",
+    answer: "Utilizamos algoritmo módulo 11 com pesos decrescentes (10 a 2 para primeiro dígito, 11 a 2 para segundo). Se resultado ≥ 10, dígito = 0. O sistema remove pontuação, valida formato, calcula dígitos verificadores e bloqueia sequências repetidas (ex: 111.111.111-11). Validação conforme padrão oficial da Receita Federal.",
+    category: "Validações e Cadastros",
+    keywords: ["cpf", "validação", "módulo 11", "documento", "receita federal"]
+  },
+  {
+    question: "A MR3X aceita o novo CNPJ alfanumérico?",
+    answer: "Sim. A partir de julho/2026, a Receita Federal permitirá CNPJs com letras A-Z nas 12 primeiras posições (raiz e ordem do estabelecimento). Os 2 últimos dígitos verificadores continuam numéricos. Nosso sistema aceita tanto CNPJs numéricos antigos quanto os novos alfanuméricos, aplicando o algoritmo mod 11 adaptado conforme norma da Receita Federal.",
+    category: "Validações e Cadastros",
+    keywords: ["cnpj", "alfanumérico", "2026", "validação", "receita federal", "novo"]
+  },
+  {
+    question: "O que é CRECI e por que é obrigatório para corretores?",
+    answer: "CRECI (Conselho Regional de Corretores de Imóveis) é o registro profissional obrigatório para corretores. O cadastro na MR3X exige: número CRECI, UF, tipo (PF/PJ), documento escaneado PDF e validade. Corretores só podem assinar contratos e atuar sobre imóveis após verificação do CRECI. Todos os dados são registrados com hash e timestamp para auditoria.",
+    category: "Validações e Cadastros",
+    keywords: ["creci", "corretor", "registro", "validação", "obrigatório", "profissional"]
+  },
+  {
+    question: "Como validar se um CRECI é verdadeiro?",
+    answer: "A MR3X registra número CRECI, UF e documentos do corretor. A verificação pode ser manual (via auditor) ou automática se houver integração com APIs públicas. O sistema armazena: creci_verified_by (user_id do aprovador), creci_verified_at (timestamp) e hash dos documentos. Corretores não verificados ficam bloqueados para ações sensíveis.",
+    category: "Validações e Cadastros",
+    keywords: ["creci", "verificação", "validação", "aprovação", "corretor", "autenticação"]
+  },
+
+  // Índices, Multas e Despesas
+  {
+    question: "Quais índices de reajuste a MR3X suporta?",
+    answer: "A MR3X suporta os principais índices oficiais: IPCA (mais recomendado, inflação oficial IBGE), IGP-M (FGV, histórico mas volátil), INPC (IBGE para renda baixa). O reajuste é feito 1 vez por ano na data de aniversário do contrato. O sistema pode aplicar reajuste automático com aviso prévio ao inquilino.",
+    category: "Índices, Multas e Despesas",
+    keywords: ["índice", "reajuste", "ipca", "igp-m", "inpc", "inflação", "aluguel"]
+  },
+  {
+    question: "Como funciona a multa por atraso de pagamento?",
+    answer: "Multa padrão: 2% sobre o valor do aluguel (conforme legislação) + juros diários até 1% ao mês. Os valores são configuráveis no contrato e aplicados automaticamente pelo sistema quando o boleto vence. A multa é incluída na segunda via do boleto.",
+    category: "Índices, Multas e Despesas",
+    keywords: ["multa", "atraso", "pagamento", "juros", "boleto", "2%"]
+  },
+  {
+    question: "O que é multa rescisória e quando é aplicada?",
+    answer: "Multa aplicada quando inquilino sai antes do prazo contratual. Geralmente equivale a 3 meses de aluguel, proporcional ao tempo restante. O valor e regras são definidos no contrato. A MR3X calcula automaticamente considerando data de saída, tempo restante e cláusulas contratuais.",
+    category: "Índices, Multas e Despesas",
+    keywords: ["multa", "rescisória", "quebra", "contrato", "saída antecipada", "3 meses"]
+  },
+  {
+    question: "Quem paga IPTU: proprietário ou inquilino?",
+    answer: "Responsabilidade padrão é do proprietário, mas cláusula contratual pode repassar ao inquilino. Na MR3X você configura quem paga e o sistema inclui no boleto automaticamente se for responsabilidade do inquilino. O repasse deve estar expressamente previsto no contrato.",
+    category: "Índices, Multas e Despesas",
+    keywords: ["iptu", "imposto", "proprietário", "inquilino", "despesa", "responsabilidade"]
+  },
+  {
+    question: "Quem paga condomínio e taxas extraordinárias?",
+    answer: "Taxa condominial mensal: paga pelo inquilino. Taxas extraordinárias (reformas, obras do prédio): responsabilidade do proprietário. O sistema permite configurar e separar esses valores. Comprovantes de condomínio podem ser anexados e integrados à cobrança.",
+    category: "Índices, Multas e Despesas",
+    keywords: ["condomínio", "taxa", "extraordinária", "despesa", "responsabilidade", "reforma"]
+  },
+  {
+    question: "Como funcionam melhorias e avarias no imóvel?",
+    answer: "Melhorias úteis (armários, reformas): geram indenização se autorizadas previamente pelo proprietário. Melhorias necessárias (reparos urgentes): podem ser reembolsadas se proprietário for omisso. Avarias (danos causados pelo inquilino): cobradas na devolução. A vistoria de entrada/saída da MR3X com fotos, vídeos e QR Code comprova o estado inicial e final, reduzindo disputas.",
+    category: "Índices, Multas e Despesas",
+    keywords: ["melhoria", "avaria", "dano", "indenização", "vistoria", "reforma"]
+  },
+
+  // Hierarquia de Usuários
+  {
+    question: "Qual a diferença entre usuários internos MR3X e usuários clientes?",
+    answer: "Usuários internos (CEO, Admin, Auditor, Suporte) pertencem à MR3X e gerenciam a plataforma SaaS - nunca operam imóveis de clientes. Usuários clientes (Agências, Proprietários Independentes, Inquilinos, Síndicos) usam a MR3X como ferramenta para gerir seus processos imobiliários. A MR3X não faz gestão de imóveis, apenas fornece a tecnologia.",
+    category: "Hierarquia de Usuários",
+    keywords: ["usuário", "interno", "cliente", "hierarquia", "separação", "mr3x"]
+  },
+  {
+    question: "O que é e o que faz o CEO da MR3X?",
+    answer: "Perfil raiz (root) da plataforma, criado apenas 1 vez. Possui acesso total: configurações globais, segurança, tokens internos. Cria apenas o Admin MR3X. Não participa de operações imobiliárias, contratos ou usuários de agências. Papel estratégico e estrutural.",
+    category: "Hierarquia de Usuários",
+    keywords: ["ceo", "root", "perfil", "máximo", "hierarquia", "dono"]
+  },
+  {
+    question: "Quais são as funções do Admin MR3X?",
+    answer: "Administrador operacional da plataforma SaaS. Ativa/desativa contas de agências, cria perfis internos (Auditor, Suporte, API Client, Representante), monitora logs e integridade, controla planos e faturamento, gerencia integrações (API, webhooks, Asaas). Não gerencia imóveis, proprietários ou inquilinos de clientes.",
+    category: "Hierarquia de Usuários",
+    keywords: ["admin", "administrador", "operacional", "gerenciamento", "plataforma"]
+  },
+  {
+    question: "O que é o Auditor e o que ele pode fazer?",
+    answer: "Perfil criado pelo Admin MR3X com acesso somente leitura. Visualiza: logs, tokens, hashes de assinaturas, comprovantes, splits, transações, histórico de alterações. Não pode criar, editar, excluir ou assinar documentos. Garante transparência e conformidade LGPD sem poder modificar dados.",
+    category: "Hierarquia de Usuários",
+    keywords: ["auditor", "leitura", "logs", "auditoria", "conformidade", "lgpd"]
+  },
+  {
+    question: "Como funciona a hierarquia dentro de uma Agência?",
+    answer: "Diretor/Dono da Agência (topo) → cria Gestor da Agência → Gestor cria Corretores e Proprietários Vinculados → Agência convida Inquilinos. Diretor e Gestor acessam relatórios financeiros, gerenciam contratos e imóveis. Corretor acessa apenas imóveis atribuídos a ele. Proprietário vinculado acompanha apenas seus repasses e imóveis.",
+    category: "Hierarquia de Usuários",
+    keywords: ["agência", "hierarquia", "diretor", "gestor", "corretor", "estrutura"]
+  },
+  {
+    question: "Qual a diferença entre Proprietário vinculado à agência e Proprietário Independente?",
+    answer: "Proprietário vinculado: cadastrado pela agência, recebe repasses, assina contratos, mas a agência gerencia tudo. Proprietário Independente: opera sozinho como 'mini-imobiliária', possui CRUD completo de inquilinos, imóveis, contratos, vistorias, notificações. Configura split diretamente com Asaas e funciona sem intermediários.",
+    category: "Hierarquia de Usuários",
+    keywords: ["proprietário", "independente", "vinculado", "agência", "diferença", "autonomia"]
+  },
+  {
+    question: "O que o Corretor pode fazer na plataforma?",
+    answer: "Acessa somente imóveis e contratos vinculados a ele. Faz captação de imóveis, realiza vistorias, gera documentos (contrato, notificação, acordo). Pode assinar como intermediador (CRECI obrigatório). Não pode criar usuários, visualizar contratos de outros corretores ou alterar configurações financeiras/split.",
+    category: "Hierarquia de Usuários",
+    keywords: ["corretor", "permissões", "acesso", "creci", "imóveis", "função"]
+  },
+  {
+    question: "Qual o papel do Síndico na MR3X?",
+    answer: "Fornece informações sobre condomínio, gera documentos de regularidade (2ª via de taxas, convenção, atas), é ponto de contato oficial, valida vistorias sobre áreas comuns, informa valores de taxas condominiais, fundo de reserva, multas coletivas e despesas extraordinárias. Não acessa financeiro privado entre proprietário e inquilino.",
+    category: "Hierarquia de Usuários",
+    keywords: ["síndico", "condomínio", "função", "papel", "taxas", "áreas comuns"]
+  },
+  {
+    question: "O que é API Client e para que serve?",
+    answer: "Perfil criado pelo Admin MR3X para integrações externas. Recebe credenciais para apps parceiros, ERPs, sistemas de imóveis, plataformas regionais. Gera tokens de acesso e permite operações automatizadas. O Admin define níveis de permissão: leitura, escrita, edição, webhooks, funções específicas (ex: criar imóveis, emitir boletos).",
+    category: "Hierarquia de Usuários",
+    keywords: ["api", "client", "integração", "automatização", "webhook", "erp"]
+  },
+
+  // Operações Financeiras e Split
+  {
+    question: "Como funciona o split Asaas na MR3X?",
+    answer: "Quando inquilino paga boleto/PIX/cartão: 1) Asaas recebe valor total, 2) Asaas divide automaticamente: taxa Asaas + taxa/plano MR3X + valor para imobiliária + (opcional) repasse direto ao proprietário, 3) Proprietário recebe valor líquido sem esforço manual. A MR3X não retém dinheiro do aluguel, apenas suas taxas de serviço.",
+    category: "Operações Financeiras e Split",
+    keywords: ["split", "asaas", "pagamento", "repasse", "divisão", "automático"]
+  },
+  {
+    question: "A MR3X recebe ou retém o dinheiro dos aluguéis?",
+    answer: "Não. A MR3X nunca recebe ou retém valores de aluguel. O dinheiro vai direto do inquilino para Asaas, que divide automaticamente conforme configuração de split: Asaas fica com sua taxa, MR3X recebe apenas taxa de serviço, e o restante vai para agência/proprietário. Isso garante segurança jurídica e transparência total.",
+    category: "Operações Financeiras e Split",
+    keywords: ["dinheiro", "retenção", "aluguel", "mr3x", "segurança", "transparência"]
+  },
+  {
+    question: "Como funciona a emissão de notas fiscais?",
+    answer: "Nota fiscal do boleto/PIX/cartão: emitida automaticamente pelo Asaas e enviada ao inquilino. Nota fiscal da MR3X: emitida apenas sobre planos e taxas de serviço MR3X (nunca sobre aluguel), pode ser enviada automaticamente por e-mail. A agência também emite suas próprias notas fiscais de serviços de administração.",
+    category: "Operações Financeiras e Split",
+    keywords: ["nota fiscal", "nf", "emissão", "asaas", "tributação", "serviço"]
+  },
+  {
+    question: "Como o inquilino recebe comprovantes de pagamento?",
+    answer: "Automaticamente após cada pagamento via WhatsApp e/ou e-mail (escolha do usuário). Cada comprovante inclui: recibo digital, hash de autenticação, QR Code de verificação, informações completas do pagamento. O sistema também envia avisos de vencimento, confirmações e segunda via quando solicitado.",
+    category: "Operações Financeiras e Split",
+    keywords: ["comprovante", "recibo", "pagamento", "whatsapp", "email", "automático"]
+  },
+  {
+    question: "Posso configurar repasse diferente para cada proprietário?",
+    answer: "Sim. Dentro de cada contrato, a agência define quanto o proprietário receberá: percentual, valor fixo ou repasse integral. Essas configurações são usadas no split automático do Asaas. A MR3X não interfere nos acordos entre agência e proprietário - a responsabilidade é da agência.",
+    category: "Operações Financeiras e Split",
+    keywords: ["repasse", "proprietário", "configuração", "split", "personalização", "flexível"]
+  },
+
+  // ACL e Permissões
+  {
+    question: "O que é ACL (Access Control List)?",
+    answer: "Lista de controle de acesso que define exatamente o que cada perfil de usuário pode fazer na plataforma: criar, ler, editar, deletar (CRUD), assinar, visualizar logs, acessar financeiro, etc. A ACL da MR3X é rigorosa e garante que usuários só acessem dados e funções permitidas para seu perfil, seguindo princípio de menor privilégio.",
+    category: "ACL e Permissões",
+    keywords: ["acl", "permissão", "acesso", "controle", "segurança", "crud"]
+  },
+  {
+    question: "Quem pode criar novos usuários na plataforma?",
+    answer: "CEO cria Admin. Admin cria perfis internos (Auditor, Gestor MR3X, Representante, API Client). Diretor/Gestor de Agência cria Gestor, Corretor, Proprietário. Proprietário Independente cria Inquilino e Síndico. Inquilinos e Síndicos são criados via convite. Corretor, Proprietário vinculado e Inquilino não podem criar usuários.",
+    category: "ACL e Permissões",
+    keywords: ["criar", "usuário", "permissão", "hierarquia", "acl", "convite"]
+  },
+  {
+    question: "Quem pode assinar contratos digitalmente?",
+    answer: "Diretor/Gestor da Agência, Corretor (com CRECI válido), Proprietário (vinculado ou independente), Inquilino. Todos com validação de identidade (e-mail/WhatsApp). Perfis internos MR3X (CEO, Admin, Auditor) não podem assinar contratos de clientes. Cada assinatura registra timestamp, IP, certificado e hash.",
+    category: "ACL e Permissões",
+    keywords: ["assinar", "contrato", "permissão", "digital", "quem pode", "creci"]
+  },
+  {
+    question: "Quem pode acessar dados financeiros?",
+    answer: "Admin MR3X: parcial (somente para suporte). Agência (Diretor/Gestor): acesso completo aos repasses e cobranças. Corretor: não tem acesso. Proprietário: somente extratos próprios. Inquilino: somente seus boletos e recibos. Auditor: leitura para conformidade. Cada perfil vê apenas dados relevantes ao seu escopo.",
+    category: "ACL e Permissões",
+    keywords: ["financeiro", "acesso", "dados", "permissão", "sigilo", "privacidade"]
+  },
+  {
+    question: "Quem pode deletar imóveis e contratos?",
+    answer: "Agência: pode deletar imóvel/contrato SEM assinaturas. Proprietário Independente: mesma regra. Corretor: nunca pode deletar. Contratos assinados não podem ser deletados, apenas rescindidos. MR3X nunca deleta dados (mantém para auditoria LGPD). Exclusões geram log permanente com user_id, timestamp e motivo.",
+    category: "ACL e Permissões",
+    keywords: ["deletar", "excluir", "contrato", "imóvel", "permissão", "lgpd"]
+  },
+  {
+    question: "O CEO ou Admin MR3X pode acessar dados dos clientes?",
+    answer: "Não podem operar contratos, imóveis ou gestão de clientes. Acesso técnico somente para suporte autorizado (logs, debug). Dados sensíveis são criptografados. Toda ação é auditada. A MR3X não gerencia imóveis dos clientes, apenas fornece a plataforma. Separação rigorosa para compliance LGPD e segurança jurídica.",
+    category: "ACL e Permissões",
+    keywords: ["admin", "ceo", "acesso", "dados", "privacidade", "lgpd", "segurança"]
+  },
+
+  // Fluxogramas e Arquitetura
+  {
+    question: "Quais são os módulos principais da plataforma MR3X?",
+    answer: "1) Cadastro (imobiliárias, proprietários, inquilinos, imóveis, funcionários), 2) Financeiro (boletos, PIX, cartão, split Asaas, conciliação, relatórios), 3) Contratos (criação, assinatura digital, anexos, renovação), 4) Vistoria (inicial/final, fotos, vídeos, PDF com hash), 5) Notificações (extrajudicial, avisos, lembretes), 6) Manutenção (chamados, orçamentos, fornecedores), 7) Auditoria (logs, tokens, verificador), 8) Portal do Inquilino, 9) Integrações (API, webhooks).",
+    category: "Fluxogramas e Arquitetura",
+    keywords: ["módulos", "funcionalidades", "plataforma", "arquitetura", "sistema", "estrutura"]
+  },
+  {
+    question: "Como é o fluxo completo de criação de um contrato?",
+    answer: "1) Cadastro → Agência/Prop. Independente cria imóvel, 2) Convida inquilino, 3) Cria contrato com template e campos obrigatórios, 4) Anexa vistoria com fotos/vídeos, 5) Gera PDF com hash SHA-256 e QR Code em cada página, 6) Envia para assinatura digital (PAdES), 7) Partes assinam (registro de IP, timestamp, certificado), 8) Contrato finalizado com carimbo de tempo TSA, 9) Split → Financeiro → Emissão de boletos automáticos.",
+    category: "Fluxogramas e Arquitetura",
+    keywords: ["fluxo", "contrato", "processo", "etapas", "criação", "assinatura"]
+  },
+  {
+    question: "Como funciona o fluxo de pagamento e split?",
+    answer: "1) Sistema gera boleto/PIX/link cartão, 2) Inquilino paga via Asaas, 3) Asaas recebe valor total, 4) Split automático: taxa Asaas + taxa MR3X + valor agência + repasse proprietário, 5) Confirmação de pagamento (webhook), 6) Sistema envia comprovante ao inquilino (WhatsApp/e-mail), 7) Repasses liberados conforme cronograma Asaas, 8) Relatórios financeiros atualizados em tempo real.",
+    category: "Fluxogramas e Arquitetura",
+    keywords: ["fluxo", "pagamento", "split", "processo", "financeiro", "automático"]
+  },
+  {
+    question: "Como funciona a verificação de documentos?",
+    answer: "1) Usuário escaneia QR Code no PDF ou acessa /api/v1/verify/{document_id}, 2) Sistema recalcula hash SHA-256 de cada página e do documento completo, 3) Compara com hash original armazenado, 4) Valida assinaturas digitais PAdES e certificados (OCSP/CRL), 5) Verifica carimbo de tempo TSA, 6) Retorna status JSON: 'valid', 'tampered', 'unsigned', 'revoked' ou 'invalid_signature'. Todo acesso é logado.",
+    category: "Fluxogramas e Arquitetura",
+    keywords: ["verificação", "fluxo", "documento", "validação", "processo", "qr code"]
   }
 ];
 
