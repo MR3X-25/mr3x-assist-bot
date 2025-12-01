@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Loader2, List, History, LogOut } from "lucide-react";
+import { MessageCircle, X, Loader2, List, History, LogOut, Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { ChatMessage } from "./ChatMessage";
@@ -8,6 +8,9 @@ import { CategoryBrowser } from "./CategoryBrowser";
 import { ConversationHistory } from "./ConversationHistory";
 import { Auth } from "./Auth";
 import { MessageFeedback } from "./MessageFeedback";
+import { SatisfactionSurvey } from "./SatisfactionSurvey";
+import { AdvancedSearch } from "./AdvancedSearch";
+import { MermaidDiagram } from "./MermaidDiagram";
 import { searchFAQ } from "@/data/faqData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./ui/use-toast";
@@ -17,9 +20,14 @@ interface Message {
   id?: string;
   text: string;
   isUser: boolean;
+  diagram?: {
+    type: string;
+    chart: string;
+    title: string;
+  };
 }
 
-type ViewMode = "chat" | "categories" | "history";
+type ViewMode = "chat" | "categories" | "history" | "search";
 
 export const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -166,6 +174,91 @@ export const Chatbot = () => {
     });
   };
 
+  const getDiagramForTopic = (message: string): { type: string; chart: string; title: string } | null => {
+    const lowerMessage = message.toLowerCase();
+    
+    // Diagrama de hierarquia de usuários
+    if (lowerMessage.includes("hierarquia") || lowerMessage.includes("usuário") || 
+        lowerMessage.includes("perfis") || lowerMessage.includes("permissões")) {
+      return {
+        type: "hierarchy",
+        title: "Hierarquia de Usuários da MR3X",
+        chart: `graph TD
+    A[CEO MR3X] --> B[Admin MR3X]
+    B --> C[Auditor]
+    B --> D[Gestor MR3X]
+    B --> E[API Client]
+    
+    F[Diretor Agência] --> G[Gestor Agência]
+    G --> H[Corretor]
+    G --> I[Proprietário]
+    I --> J[Inquilino]
+    
+    K[Proprietário Independente] --> L[Inquilino]
+    K --> M[Síndico]
+    
+    style A fill:#e74c3c
+    style B fill:#3498db
+    style F fill:#2ecc71
+    style K fill:#f39c12`
+      };
+    }
+    
+    // Diagrama de fluxo de contratos
+    if (lowerMessage.includes("contrato") || lowerMessage.includes("assinatura") || 
+        lowerMessage.includes("digital")) {
+      return {
+        type: "contract",
+        title: "Fluxo de Contratos Digitais",
+        chart: `graph LR
+    A[Criar Contrato] --> B[Adicionar Partes]
+    B --> C[Anexar Documentos]
+    C --> D[Gerar PDF]
+    D --> E[Calcular Hash SHA-256]
+    E --> F[QR Code por Página]
+    F --> G[Assinatura PAdES]
+    G --> H[Carimbo de Tempo]
+    H --> I[Contrato Válido]
+    I --> J[Armazenar Hash]
+    J --> K[Verificação Pública]
+    
+    style A fill:#3498db
+    style G fill:#2ecc71
+    style I fill:#e74c3c
+    style K fill:#f39c12`
+      };
+    }
+    
+    // Diagrama de split de pagamento
+    if (lowerMessage.includes("split") || lowerMessage.includes("pagamento") || 
+        lowerMessage.includes("repasse") || lowerMessage.includes("asaas")) {
+      return {
+        type: "payment",
+        title: "Fluxo de Split de Pagamento",
+        chart: `graph TD
+    A[Inquilino Paga] --> B[Gateway Asaas]
+    B --> C{Split Automático}
+    C --> D[Taxa Asaas]
+    C --> E[Taxa MR3X]
+    C --> F[Valor Agência]
+    C --> G[Valor Proprietário]
+    
+    F --> H[Conta Agência]
+    G --> I[Conta Proprietário]
+    
+    H --> J[Comissão Corretor]
+    
+    style A fill:#3498db
+    style B fill:#9b59b6
+    style E fill:#e74c3c
+    style H fill:#2ecc71
+    style I fill:#f39c12`
+      };
+    }
+    
+    return null;
+  };
+
   const handleSendMessage = async (message: string) => {
     const userMessage = { text: message, isUser: true };
     setMessages((prev) => [...prev, userMessage]);
@@ -221,7 +314,16 @@ export const Chatbot = () => {
       }
 
       const reply = data.reply || data.fallback;
-      const assistantMessage = { text: reply, isUser: false };
+      
+      // Verificar se deve adicionar diagrama
+      const diagram = getDiagramForTopic(message);
+      
+      const assistantMessage: Message = { 
+        text: reply, 
+        isUser: false,
+        diagram: diagram || undefined
+      };
+      
       setMessages((prev) => [...prev, assistantMessage]);
 
       if (user && convId) {
@@ -320,6 +422,15 @@ export const Chatbot = () => {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-white hover:bg-white/20 transition-all hover:scale-110"
+                      onClick={() => setViewMode("search")}
+                      title="Busca Avançada"
+                    >
+                      <Search className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-white hover:bg-white/20 transition-all hover:scale-110"
                       onClick={() => setViewMode("categories")}
                       title="Categorias"
                     >
@@ -352,7 +463,12 @@ export const Chatbot = () => {
               </div>
 
               {/* Content */}
-              {viewMode === "categories" ? (
+              {viewMode === "search" ? (
+                <AdvancedSearch
+                  onQuestionSelect={handleSendMessage}
+                  onClose={() => setViewMode("chat")}
+                />
+              ) : viewMode === "categories" ? (
                 <CategoryBrowser
                   onQuestionSelect={handleSendMessage}
                   onClose={() => setViewMode("chat")}
@@ -370,9 +486,18 @@ export const Chatbot = () => {
                     {messages.map((msg, idx) => (
                       <div key={idx} className="animate-slide-up">
                         <ChatMessage message={msg.text} isUser={msg.isUser} />
-                        {/* Adicionar feedback apenas para mensagens do bot (não do usuário) */}
+                        
+                        {/* Diagrama Mermaid se disponível */}
+                        {!msg.isUser && msg.diagram && (
+                          <MermaidDiagram
+                            chart={msg.diagram.chart}
+                            title={msg.diagram.title}
+                          />
+                        )}
+                        
+                        {/* Pesquisa de satisfação para mensagens do bot */}
                         {!msg.isUser && user && currentConversationId && idx > 0 && (
-                          <MessageFeedback
+                          <SatisfactionSurvey
                             conversationId={currentConversationId}
                             messageContent={msg.text}
                             userId={user.id}
