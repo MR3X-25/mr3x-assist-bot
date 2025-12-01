@@ -3,14 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { BarChart3, MessageSquare, Star, TrendingUp, Users, ArrowLeft } from "lucide-react";
+import { BarChart3, MessageSquare, Star, TrendingUp, Users, ArrowLeft, Download, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 interface AnalyticsData {
   totalQuestions: number;
   totalFeedback: number;
   averageRating: number;
+  satisfactionRate: number;
+  unsatisfiedCount: number;
   topQuestions: Array<{ question: string; count: number; category: string }>;
   ratingDistribution: Array<{ rating: number; count: number }>;
   recentFeedback: Array<{
@@ -18,6 +22,10 @@ interface AnalyticsData {
     feedback_text: string;
     created_at: string;
     message_content: string;
+  }>;
+  improvementSuggestions: Array<{
+    feedback_text: string;
+    created_at: string;
   }>;
 }
 
@@ -88,6 +96,15 @@ export default function AdminDashboard() {
       const averageRating = ratings && ratings.length > 0
         ? ratings.reduce((sum, item) => sum + item.rating, 0) / ratings.length
         : 0;
+      
+      // Taxa de satisfação (rating >= 4)
+      const satisfiedCount = ratings?.filter(r => r.rating >= 4).length || 0;
+      const satisfactionRate = ratings && ratings.length > 0
+        ? (satisfiedCount / ratings.length) * 100
+        : 0;
+      
+      // Contagem de insatisfeitos
+      const unsatisfiedCount = ratings?.filter(r => r.rating <= 2).length || 0;
 
       // Top perguntas
       const { data: questionsData } = await supabase
@@ -125,20 +142,132 @@ export default function AdminDashboard() {
         .select("rating, feedback_text, created_at, message_content")
         .order("created_at", { ascending: false })
         .limit(10);
+      
+      // Sugestões de melhoria (feedbacks de usuários insatisfeitos)
+      const { data: improvementSuggestions } = await supabase
+        .from("message_feedback")
+        .select("feedback_text, created_at")
+        .lte("rating", 2)
+        .not("feedback_text", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(20);
 
       setAnalytics({
         totalQuestions: totalQuestions || 0,
         totalFeedback: totalFeedback || 0,
         averageRating,
+        satisfactionRate,
+        unsatisfiedCount,
         topQuestions,
         ratingDistribution,
         recentFeedback: recentFeedback || [],
+        improvementSuggestions: improvementSuggestions || [],
       });
     } catch (error) {
       console.error("Erro ao carregar analytics:", error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar as estatísticas.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const exportToPDF = async () => {
+    try {
+      toast({
+        title: "Gerando PDF...",
+        description: "Por favor, aguarde.",
+      });
+
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      let yPosition = 20;
+
+      // Título
+      pdf.setFontSize(20);
+      pdf.setTextColor(79, 70, 229); // primary color
+      pdf.text("Dashboard Administrativo MR3X", pageWidth / 2, yPosition, { align: "center" });
+      
+      yPosition += 10;
+      pdf.setFontSize(10);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, pageWidth / 2, yPosition, { align: "center" });
+      
+      yPosition += 15;
+
+      // Métricas principais
+      pdf.setFontSize(14);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text("Métricas Principais", 20, yPosition);
+      yPosition += 8;
+
+      pdf.setFontSize(10);
+      pdf.text(`Total de Perguntas: ${analytics?.totalQuestions || 0}`, 20, yPosition);
+      yPosition += 6;
+      pdf.text(`Total de Avaliações: ${analytics?.totalFeedback || 0}`, 20, yPosition);
+      yPosition += 6;
+      pdf.text(`Média de Satisfação: ${analytics?.averageRating.toFixed(1) || 0} estrelas`, 20, yPosition);
+      yPosition += 6;
+      pdf.text(`Taxa de Satisfação: ${analytics?.satisfactionRate.toFixed(0) || 0}%`, 20, yPosition);
+      yPosition += 6;
+      pdf.text(`Usuários Insatisfeitos: ${analytics?.unsatisfiedCount || 0}`, 20, yPosition);
+      yPosition += 12;
+
+      // Top 10 perguntas
+      if (analytics?.topQuestions && analytics.topQuestions.length > 0) {
+        pdf.setFontSize(14);
+        pdf.text("Top 10 Perguntas Mais Frequentes", 20, yPosition);
+        yPosition += 8;
+
+        pdf.setFontSize(9);
+        analytics.topQuestions.forEach((item, index) => {
+          if (yPosition > pageHeight - 20) {
+            pdf.addPage();
+            yPosition = 20;
+          }
+          
+          const text = `${index + 1}. ${item.question} (${item.count}x - ${item.category})`;
+          const lines = pdf.splitTextToSize(text, pageWidth - 40);
+          pdf.text(lines, 20, yPosition);
+          yPosition += lines.length * 5;
+        });
+      }
+
+      yPosition += 10;
+
+      // Distribuição de avaliações
+      if (yPosition > pageHeight - 60) {
+        pdf.addPage();
+        yPosition = 20;
+      }
+
+      pdf.setFontSize(14);
+      pdf.text("Distribuição de Avaliações", 20, yPosition);
+      yPosition += 8;
+
+      pdf.setFontSize(10);
+      analytics?.ratingDistribution.reverse().forEach(item => {
+        const percentage = analytics.totalFeedback > 0
+          ? ((item.count / analytics.totalFeedback) * 100).toFixed(0)
+          : 0;
+        pdf.text(`${item.rating} estrelas: ${item.count} avaliações (${percentage}%)`, 20, yPosition);
+        yPosition += 6;
+      });
+
+      // Salvar PDF
+      pdf.save(`dashboard-mr3x-${new Date().toISOString().split("T")[0]}.pdf`);
+
+      toast({
+        title: "PDF gerado com sucesso!",
+        description: "O download deve iniciar automaticamente.",
+      });
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível gerar o PDF.",
         variant: "destructive",
       });
     }
@@ -177,10 +306,17 @@ export default function AdminDashboard() {
               <p className="text-muted-foreground">Estatísticas e métricas do chatbot MR3X</p>
             </div>
           </div>
+          <Button
+            onClick={exportToPDF}
+            className="gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Exportar PDF
+          </Button>
         </div>
 
         {/* Métricas principais */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <Card className="border-2 hover:border-primary/50 transition-all">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -219,20 +355,31 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
-
-          <Card className="border-2 hover:border-accent-2/50 transition-all">
+          
+          <Card className="border-2 hover:border-green-500/50 transition-all">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-accent-2" />
-                Taxa de Feedback
+                <ThumbsUp className="w-4 h-4 text-green-600" />
+                Taxa de Satisfação
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-accent-2">
-                {analytics.totalQuestions > 0
-                  ? ((analytics.totalFeedback / analytics.totalQuestions) * 100).toFixed(0)
-                  : 0}
-                %
+              <div className="text-3xl font-bold text-green-600">
+                {analytics.satisfactionRate.toFixed(0)}%
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2 hover:border-red-500/50 transition-all">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <ThumbsDown className="w-4 h-4 text-red-600" />
+                Insatisfeitos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-red-600">
+                {analytics.unsatisfiedCount}
               </div>
             </CardContent>
           </Card>
@@ -240,10 +387,11 @@ export default function AdminDashboard() {
 
         {/* Tabs com dados detalhados */}
         <Tabs defaultValue="questions" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="questions">Perguntas Frequentes</TabsTrigger>
             <TabsTrigger value="ratings">Distribuição de Avaliações</TabsTrigger>
             <TabsTrigger value="feedback">Feedbacks Recentes</TabsTrigger>
+            <TabsTrigger value="improvements">Melhorias Sugeridas</TabsTrigger>
           </TabsList>
 
           <TabsContent value="questions">
@@ -356,6 +504,48 @@ export default function AdminDashboard() {
                       </p>
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="improvements">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5" />
+                  Sugestões de Melhoria da Base de Conhecimento
+                </CardTitle>
+                <CardDescription>
+                  Feedbacks de usuários insatisfeitos para melhorar o chatbot
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {analytics.improvementSuggestions.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      Nenhuma sugestão de melhoria registrada ainda
+                    </p>
+                  ) : (
+                    analytics.improvementSuggestions.map((item, index) => (
+                      <div key={index} className="p-4 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-red-700 dark:text-red-400">
+                            Usuário Insatisfeito
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(item.created_at).toLocaleDateString("pt-BR")}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium">
+                          {item.feedback_text}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          💡 Considere adicionar esta informação à base de conhecimento do FAQ
+                        </p>
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
