@@ -36,7 +36,7 @@ export const Chatbot = () => {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
-      text: "Olá! 👋 Sou o assistente virtual da MR3X. Como posso ajudá-lo hoje?",
+      text: "Olá! 👋 Sou o **MR3X Chatbox**, seu assistente inteligente para gestão de aluguéis. Como posso ajudá-lo hoje?\n\n📧 **Contatos úteis:**\n• contato@mr3x.com.br - Dúvidas gerais\n• suporte@mr3x.com.br - Problemas técnicos\n• vendas@mr3x.com.br - Planos e vendas",
       isUser: false,
     },
   ]);
@@ -407,14 +407,14 @@ export const Chatbot = () => {
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" 
                      style={{ backgroundSize: '200% 100%' }} />
                 <div className="relative flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center animate-pulse-glow backdrop-blur-sm">
-                    <MessageCircle className="w-6 h-6" />
+                  <div className="w-10 h-10 rounded-full overflow-hidden animate-pulse-glow backdrop-blur-sm">
+                    <img src="/mr3x-chatbox-logo.png" alt="MR3X Chatbox" className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-bold text-lg">Assistente MR3X</h3>
+                    <h3 className="font-bold text-lg">MR3X Chatbox</h3>
                     <p className="text-xs text-white/90 flex items-center gap-1">
-                      <span className="w-2 h-2 bg-accent-2 rounded-full animate-pulse" />
-                      Online • Respostas instantâneas
+                      <span className="w-2 h-2 bg-accent-1 rounded-full animate-pulse" />
+                      Online • Assistente Inteligente
                     </p>
                   </div>
                   <div className="flex gap-1">
